@@ -14,7 +14,7 @@ import secrets
 import models
 import helpers
 
-# add courseId field automatically based on route
+# add courseId field automatically based on route, filter by courseId
 
 ### MONGO CONNECTION ###
 def connect():
@@ -35,7 +35,6 @@ def get_password(username):
     if username == secrets.username:
         return secrets.password
     return None
-
 
 @auth.error_handler
 def unauthorized():
@@ -75,11 +74,11 @@ class QuestionListAPI(Resource):
         super(QuestionListAPI, self).__init__()
 
     def get(self, courseId):
-        return helpers.getItems(handle, "questions", models.question_fields)
+        return helpers.getItems(handle, "questions", models.question_fields, courseId)
 
     def post(self, courseId):
         args = self.reqparse.parse_args()
-        return helpers.postItem(handle, "questions", models.question_fields, args), 201
+        return helpers.postItem(handle, "questions", models.question_fields, args, courseId), 201
 
 class UserAPI(Resource):
     decorators = [auth.login_required]
@@ -109,17 +108,18 @@ class QuestionAPI(Resource):
         self.reqparse.add_argument('answer', type=str, location='json')
         self.reqparse.add_argument('hint', type=str, location='json')
         self.reqparse.add_argument('initialOrdering', type=float, location='json')
+        self.reqparse.add_argument('courseId', type=str, location='json')
         super(QuestionAPI, self).__init__()
 
     def get(self, courseId, _id):
-        return helpers.getItem(handle, "questions", models.question_fields, _id)
+        return helpers.getItem(handle, "questions", models.question_fields, _id, courseId)
 
     def put(self, courseId, _id):
         args = self.reqparse.parse_args()
-        return helpers.putItem(handle, "questions", models.question_fields, args, _id)
+        return helpers.putItem(handle, "questions", models.question_fields, args, _id, courseId)
 
     def delete(self, courseId, _id):
-        return helpers.deleteItem(handle, "questions", _id)
+        return helpers.deleteItem(handle, "questions", _id, courseId)
 
 api.add_resource(QuestionListAPI, '/api/courses/<courseId>/questions', endpoint='questions')
 api.add_resource(QuestionAPI, '/api/courses/<courseId>/questions/<_id>', endpoint='question')
@@ -129,3 +129,4 @@ api.add_resource(UserAPI, '/api/users/<_id>', endpoint='user')
 
 if __name__ == '__main__':
     app.run(debug=True)
+    
