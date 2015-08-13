@@ -41,6 +41,21 @@ def unauthorized():
     # return 403 instead of 401 to prevent browsers from displaying the default auth dialog
     return make_response(jsonify({'message': 'Unauthorized access'}), 403)
 
+class CourseListAPI(Resource):
+    decorators = [auth.login_required]
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('name', type=str, location='json')
+        super(CourseListAPI, self).__init__()
+
+    def get(self):
+        return helpers.getItems(handle, "courses", models.course_fields)
+
+    def post(self):
+        args = self.reqparse.parse_args()
+        return helpers.postItem(handle, "courses", models.course_fields, args), 201
+
 
 class UserListAPI(Resource):
     decorators = [auth.login_required]
@@ -79,6 +94,24 @@ class QuestionListAPI(Resource):
     def post(self, courseId):
         args = self.reqparse.parse_args()
         return helpers.postItem(handle, "questions", models.question_fields, args, courseId), 201
+
+class CourseAPI(Resource):
+    decorators = [auth.login_required]
+
+    def __init__(self):
+        self.reqparse = reqparse.RequestParser()
+        self.reqparse.add_argument('name', type=str, location='json')
+        super(CourseAPI, self).__init__()
+
+    def get(self, _id):
+        return helpers.getItem(handle, "courses", models.course_fields, _id)
+
+    def put(self, _id):
+        args = self.reqparse.parse_args()
+        return helpers.putItem(handle, "courses", models.course_fields, args, _id)
+
+    def delete(self, _id):
+        return helpers.deleteItem(handle, "courses", _id)
 
 class UserAPI(Resource):
     decorators = [auth.login_required]
@@ -121,6 +154,8 @@ class QuestionAPI(Resource):
     def delete(self, courseId, _id):
         return helpers.deleteItem(handle, "questions", _id, courseId)
 
+api.add_resource(CourseListAPI, '/api/courses', endpoint='courses')
+api.add_resource(CourseAPI, '/api/courses/<_id>', endpoint='course')
 api.add_resource(QuestionListAPI, '/api/courses/<courseId>/questions', endpoint='questions')
 api.add_resource(QuestionAPI, '/api/courses/<courseId>/questions/<_id>', endpoint='question')
 api.add_resource(UserListAPI, '/api/users', endpoint='users')
@@ -129,4 +164,3 @@ api.add_resource(UserAPI, '/api/users/<_id>', endpoint='user')
 
 if __name__ == '__main__':
     app.run(debug=True)
-    

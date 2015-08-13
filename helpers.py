@@ -11,6 +11,8 @@ def getItems(handle, collection, item_fields, courseId=None):
     return {collection: [marshal(item, item_fields) for item in items]}
 
 def getItem(handle, collection, item_fields, _id, courseId=None):
+    if type(_id)!=str or len(_id)!=12:
+        abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)
     if len(item) == 0:
@@ -30,6 +32,8 @@ def postItem(handle, collection, item_fields, args, courseId=None):
     return {collection: marshal(item, item_fields)}
 
 def putItem(handle, collection, item_fields, args, _id, courseId=None):
+    if type(_id)!=str or len(_id)!=12:
+        abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)
     if len(item) == 0:
@@ -49,6 +53,8 @@ def putItem(handle, collection, item_fields, args, _id, courseId=None):
     return {collection: marshal(item, item_fields)}
 
 def deleteItem(handle, collection, _id, courseId=None):
+    if type(_id)!=str or len(_id)!=12:
+        abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)
     if len(item) == 0:
