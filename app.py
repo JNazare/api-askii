@@ -10,10 +10,15 @@ from flask import Flask, jsonify, abort, make_response, request
 from flask.ext.restful import Api, Resource, reqparse, fields, marshal
 from flask.ext.httpauth import HTTPBasicAuth
 
+import datetime
+from operator import itemgetter
+
 import secrets
 import models
 import helpers
 import sm2
+
+PROB_NEW = 2.0/3.0
 
 ### MONGO CONNECTION ###
 def connect():
@@ -219,6 +224,51 @@ def answerQuestion(courseId):
 
     handle.users.update({"_id": ObjectId(userId)}, {'$set': {'answeredQuestions': user['answeredQuestions']}})
     return 'Updated question %s for user %s' % (questionId, user["_id"])
+
+
+@app.route('/api/courses/<courseId>/fetch-question', methods=['POST'])
+@auth.login_required
+def fetchQuestion(courseId):
+    if 'userId' not in request.args:
+        abort(404)
+
+    userId = request.args['userId']
+    if len(userId) != helpers.OBJECT_ID_LENGTH: 
+        abort(404)
+    
+    user = handle.users.find_one(ObjectId(userId))
+    if not user:
+        abort(404)
+
+    # 1. First search for questions in answeredQuestions with a reply_at in today's time range
+
+    sort_by_datetime = []
+    for answered_question in user['answeredQuestions']:
+        if answered_question['courseId']==courseId:
+            reply_at = answered_question["reply_at"].split("-")
+            reply_at = datetime.date(day=int(reply_at[0]), month=int(reply_at[1]), year=int(reply_at[2]))
+            answered_question["reply_at"]=reply_at
+            sort_by_datetime.append(answered_question)
+
+    sorted_by_datetime = sorted(sort_by_datetime, key=itemgetter("reply_at"))
+    for answered_question in sort_by_datetime:
+        if reply_at == datetime.datetime.today().date():
+            question = QuestionAPI().get(courseId=courseId, _id=answered_question["questionId"])["questions"]
+            return jsonify(question)
+
+    # 2. Select if it will be a review or new question
+    weighted_choice = helpers.probabilityOfNewQuestion(PROB_NEW)
+    
+    # 3. If new, return next question in order
+    if weighted_choice == True:
+        questionList = QuestionListAPI().get(courseId=courseId)["questions"]
+        sortedQuestionList = sorted(questionList, key=itemgetter('initialOrdering'))
+        return jsonify(sortedQuestionList[0])
+
+    # 4. If review, look for a review question that has missed its reply_at date
+    answered_question = list(reversed(sorted_by_datetime))[0]
+    question = QuestionAPI().get(courseId=courseId, _id=answered_question["questionId"])["questions"]
+    return jsonify(question)
 
 
 if __name__ == '__main__':

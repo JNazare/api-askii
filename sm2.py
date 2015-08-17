@@ -4,6 +4,7 @@ import datetime
 
 EFACTOR_DEFAULT = 2.5
 DEFAULT_Q = 4
+STRING_TIME = "%d-%m-%Y"
 
 def getEFactor(question, quality=DEFAULT_Q):
 	print question
@@ -32,5 +33,5 @@ def getReplyAt(question, quality=DEFAULT_Q):
 		question['reply_at']=None
 	else:
 		question['reply_at']=datetime.date.today()+datetime.timedelta(days=int(float(question["i-interval"])))
-		question['reply_at']=question['reply_at'].strftime("%A, %d. %B %Y %I:%M%p")
+		question['reply_at']=question['reply_at'].strftime(STRING_TIME)
 	return question['reply_at']

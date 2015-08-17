@@ -1,7 +1,11 @@
 from bson.objectid import ObjectId
 from flask.ext.restful import marshal
 from flask import abort
+import random
+import numpy as np
+
 import models
+
 
 OBJECT_ID_LENGTH = 24
 
@@ -66,3 +70,9 @@ def deleteItem(handle, collection, _id, courseId=None):
             abort(404)
     handle[collection].remove({"_id": ObjectId(unicode(item["_id"]))})
     return {'result': True}
+
+def probabilityOfNewQuestion(prob_new):
+    prob_review = 1.0 - prob_new
+    weighted_choices = [(True, prob_new), (False, prob_review)]
+    choices, weights = zip(*weighted_choices)
+    return np.random.choice(choices, p=weights)
