@@ -14,7 +14,6 @@ def getEFactor(question, quality=DEFAULT_Q):
 				question['e-factor']=question['e-factor']+(0.1-(5-quality)*(0.08+(5-quality)*0.02))
 	else:
 		question['e-factor']=2.5
-	print question['e-factor']
 	return question['e-factor']
 
 def getIInterval(question, quality=DEFAULT_Q):

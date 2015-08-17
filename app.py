@@ -207,7 +207,9 @@ def answerQuestion(courseId):
             to_update_index = ct
         ct += 1
 
+    # FIX QUALITY HARDCODE. STOP UPDATING THE QUESTION IF QUALITY < 3 ... add quality to request.args and then call in jquery
     quality = 5
+
     updated_fields = {}
     updated_fields['e-factor'] = sm2.getEFactor(to_update, quality)
     updated_fields['i-interval'] = sm2.getIInterval(to_update, quality)
