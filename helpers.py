@@ -3,6 +3,8 @@ from flask.ext.restful import marshal
 from flask import abort
 import models
 
+OBJECT_ID_LENGTH = 24
+
 def getItems(handle, collection, item_fields, courseId=None):
     if courseId:
         items = handle[collection].find({"courseId": courseId})
@@ -11,7 +13,7 @@ def getItems(handle, collection, item_fields, courseId=None):
     return {collection: [marshal(item, item_fields) for item in items]}
 
 def getItem(handle, collection, item_fields, _id, courseId=None):
-    if type(_id)!=str or len(_id)!=12:
+    if type(_id)!=unicode or len(_id)!=OBJECT_ID_LENGTH:
         abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)
@@ -32,7 +34,7 @@ def postItem(handle, collection, item_fields, args, courseId=None):
     return {collection: marshal(item, item_fields)}
 
 def putItem(handle, collection, item_fields, args, _id, courseId=None):
-    if type(_id)!=str or len(_id)!=12:
+    if type(_id)!=unicode or len(_id)!=OBJECT_ID_LENGTH:
         abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)
@@ -53,7 +55,7 @@ def putItem(handle, collection, item_fields, args, _id, courseId=None):
     return {collection: marshal(item, item_fields)}
 
 def deleteItem(handle, collection, _id, courseId=None):
-    if type(_id)!=str or len(_id)!=12:
+    if type(_id)!=unicode or len(_id)!=OBJECT_ID_LENGTH:
         abort(404)
     _id = ObjectId(_id)
     item = handle[collection].find_one(_id)

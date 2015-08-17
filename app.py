@@ -6,15 +6,14 @@ Flask-RESTful extension."""
 from bson.objectid import ObjectId
 from pymongo import MongoClient
 
-from flask import Flask, jsonify, abort, make_response
+from flask import Flask, jsonify, abort, make_response, request
 from flask.ext.restful import Api, Resource, reqparse, fields, marshal
 from flask.ext.httpauth import HTTPBasicAuth
 
 import secrets
 import models
 import helpers
-
-# add courseId field automatically based on route, filter by courseId
+import sm2
 
 ### MONGO CONNECTION ###
 def connect():
@@ -62,7 +61,7 @@ class UserListAPI(Resource):
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('answeredQuestions', type=dict, required=True, default={}, location='json')
+        self.reqparse.add_argument('answeredQuestions', type=list, required=True, default=[], location='json')
         self.reqparse.add_argument('personalData', type=dict, required=True, default={}, location='json')
         super(UserListAPI, self).__init__()
 
@@ -118,7 +117,7 @@ class UserAPI(Resource):
 
     def __init__(self):
         self.reqparse = reqparse.RequestParser()
-        self.reqparse.add_argument('answeredQuestions', type=dict, default={}, location='json')
+        self.reqparse.add_argument('answeredQuestions', type=list, default=[], location='json')
         self.reqparse.add_argument('personalData', type=dict, default={}, location='json')
         super(UserAPI, self).__init__()
 
@@ -161,6 +160,67 @@ api.add_resource(QuestionAPI, '/api/courses/<courseId>/questions/<_id>', endpoin
 api.add_resource(UserListAPI, '/api/users', endpoint='users')
 api.add_resource(UserAPI, '/api/users/<_id>', endpoint='user')
 
+@app.route('/')
+def getIndex():
+    return 'Welcome to Askii'
+
+@app.route('/developers')
+def getDevelopers():
+    return 'Welcome to the Askii Dev Docs. This is where the API explanation will live.'
+
+@app.route('/api')
+@auth.login_required
+def getApi():
+    return 'Welcome to the Askii API'
+
+@app.route('/api/courses/<courseId>/answer-question', methods=['POST'])
+@auth.login_required
+def answerQuestion(courseId):
+
+    if 'userId' and 'questionId' not in request.args:
+        abort(404)
+
+    userId = request.args['userId']
+    questionId = request.args['questionId']
+    if len(userId) != helpers.OBJECT_ID_LENGTH or len(questionId) != helpers.OBJECT_ID_LENGTH: 
+        abort(404)
+
+    question = handle.questions.find_one(ObjectId(questionId))
+    if len(question) == 0 or question['courseId'] != courseId: 
+        abort(404)
+    
+    user = handle.users.find_one(ObjectId(userId))
+    if not user:
+        abort(404)
+
+    ct = 0
+    to_update = {}
+    to_update_index = None
+    for answered_question in user['answeredQuestions']:
+        if answered_question['courseId']==courseId and answered_question['questionId']==questionId:
+            to_update = answered_question
+            to_update_index = ct
+        ct += 1
+
+    quality = 5
+    updated_fields = {}
+    updated_fields['e-factor'] = sm2.getEFactor(to_update, quality)
+    updated_fields['i-interval'] = sm2.getIInterval(to_update, quality)
+    updated_fields['reply_at']=sm2.getReplyAt(to_update, quality)
+    
+    if to_update_index != None:
+        updated_fields["courseId"]=to_update["courseId"]
+        updated_fields["questionId"]=to_update["questionId"]
+        user['answeredQuestions'][to_update_index]=updated_fields
+    else:
+        updated_fields["courseId"]=courseId
+        updated_fields["questionId"]=questionId
+        user['answeredQuestions'].append(updated_fields)
+
+    handle.users.update({"_id": ObjectId(userId)}, {'$set': {'answeredQuestions': user['answeredQuestions']}})
+    return 'Updated question %s for user %s' % (questionId, user["_id"])
+
 
 if __name__ == '__main__':
     app.run(debug=True)
+
